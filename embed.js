@@ -10,7 +10,8 @@ else {
       border_radius : "5px",
       fienta_host : "https://fienta.com",
       descriptionEnabled : !1,
-      imageEnabled : !1
+      imageEnabled: !1,
+      stopPropagation: false,
     },
     settings : {},
     isIOS :
@@ -75,7 +76,10 @@ else {
             var t =
                 e.composedPath()[0].closest(fientaEmbed.settings.link_selector);
             t && t.href && t.href.includes("fienta.") &&
-                (e.preventDefault(), fientaEmbed.openInIframe(t.href))
+                (e.preventDefault(),
+                 // Work around Wix's insistence on navigating.
+                fientaEmbed.settings.stopPropagation && e.stopPropagation(),
+                fientaEmbed.openInIframe(t.href));
           }))
     },
     appendIframe : function() {
