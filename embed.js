@@ -2,7 +2,7 @@ if (void 0 !== fientaEmbed)
   console.log("Warning: Fienta's embed.js is included twice!");
 else {
   var fientaEmbed = {
-    version : "2024-04-11",
+    version : "2024-08-02",
     defaults : {
       link_selector : 'body a[href*="fienta."]',
       utm_source : "homepage",
@@ -50,10 +50,30 @@ else {
       }
       return t
     }(window.location.search.substr(1).split("&")),
+    initBackHandler : function(e) {
+      history.replaceState({page : "cart"}, null, null),
+          history.pushState({page : "cart-loaded"}, null, null),
+          window.onpopstate = function(t) {
+            if (t.state && "cart" === t.state.page) {
+              var i = fientaEmbed.parseEventURL(e, "slug");
+              parent.postMessage({op : "hide_fienta_iframe", slug : i}, "*"),
+                  window.onpopstate = null
+            }
+          }
+    },
+    restoreHistoryStates : function() {
+      if (history.state && "cart-loaded" === history.state.page) {
+        history.back();
+        window.onpopstate = function(e) {
+          e.state && "cart" === e.state.page && (window.onpopstate = null)
+        }
+      }
+    },
     setClickHandler : function() {
       document.addEventListener(
           "click", (function(e) {
-            var t = e.target.closest(fientaEmbed.settings.link_selector);
+            var t =
+                e.composedPath()[0].closest(fientaEmbed.settings.link_selector);
             t && t.href && t.href.includes("fienta.") &&
                 (e.preventDefault(), fientaEmbed.openInIframe(t.href))
           }))
@@ -88,9 +108,11 @@ else {
       t.style.overflowY = this.overflowHtmlY,
       i.style.overflowX = this.overflowBodyX,
       i.style.overflowY = this.overflowBodyY, this.updateTicketsAvailable(e),
-      window.postMessage({op : "fienta_iframe_closed"}, "*")
+      window.postMessage({op : "fienta_iframe_closed"}, "*"),
+      fientaEmbed.restoreHistoryStates()
     },
     openInIframe : function(e) {
+      fientaEmbed.initBackHandler(e);
       var t = this.parseURL(e),
           i = t.pathname.replace(/^\/+/, "").replace(/\/+$/, "");
       if (!i)
@@ -102,18 +124,18 @@ else {
               "https://" + n + "/" + this.clickedEventPath + t.search,
           this.clickedEventCartURL =
               "https://" + n + "/" + this.clickedEventPath + "/cart" + t.search;
-      var r = this.clickedEventURL;
+      var s = this.clickedEventURL;
       if (void 0 !== this.queryString) {
-        var s = {}, o = Object.assign({}, this.queryString);
-        if (Object.keys(o).forEach(
-                (function(e) { -1 !== e.indexOf("utm_") && (s[e] = o[e]) })),
-            Object.keys(s).length > 0) {
-          var d = this.serializeParams(s);
-          -1 === r.indexOf("?") ? r += "?" + d : r += "&" + d
+        var o = {}, r = Object.assign({}, this.queryString);
+        if (Object.keys(r).forEach(
+                (function(e) { -1 !== e.indexOf("utm_") && (o[e] = r[e]) })),
+            Object.keys(o).length > 0) {
+          var l = this.serializeParams(o);
+          -1 === s.indexOf("?") ? s += "?" + l : s += "&" + l
         }
       }
       this.iframeSrc =
-          r + (-1 === r.indexOf("?") ? "?" : "&") + "embed=1" +
+          s + (-1 === s.indexOf("?") ? "?" : "&") + "embed=1" +
           (this.settings.utm_source && -1 === t.search.indexOf("utm_source")
                ? "&utm_source=" + this.settings.utm_source
                : "") +
@@ -123,7 +145,7 @@ else {
           (this.settings.descriptionEnabled ? "&descriptionEnabled=1" : "") +
           (this.settings.imageEnabled ? "&imageEnabled=1" : "") +
           (void 0 !== this.settings.step ? "&step=" + this.settings.step : ""),
-      this.isIOS ? location.href = this.clickedEventURL
+      this.isIOS ? location.href = this.iframeSrc
                  : (document.getElementById("fienta_iframe")
                         .contentWindow.location.replace(this.iframeSrc),
                     this.iframeShow())
@@ -202,15 +224,15 @@ else {
     },
     parseEventURL : function(e, t) {
       var i = this.parseURL(e);
-      if (!(r = i.pathname.replace(/^\/+/, "").replace(/\/+$/, "")))
+      if (!(s = i.pathname.replace(/^\/+/, "").replace(/\/+$/, "")))
         return !1;
       var n = i.hostname;
       -1 !== n.indexOf("piletimasin.ee") &&
           (n = n.replace(/piletimasin.ee/gi, "fienta.com"));
-      var a = r.split("/");
+      var a = s.split("/");
       "cart" == a[a.length - 1] && a.pop();
-      var r = a.join("/"), s = a[a.length - 1];
-      return "slug" == t ? s : "https://" + n + "/" + r + i.search
+      var s = a.join("/"), o = a[a.length - 1];
+      return "slug" == t ? o : "https://" + n + "/" + s + i.search
     },
     serializeParams : function(e) {
       return 0 === Object.keys(e).length ? ""
